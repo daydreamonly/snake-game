@@ -1,4 +1,6 @@
 #include "stdio.h"
+#include "termios.h"
+#include <stdlib.h>
 #include <unistd.h>
 #define WIDTH 20
 #define HEIGHT 10
@@ -14,6 +16,57 @@ enum direction current_direction = left;
 
 struct Point snake[100];
 int snake_length = 3;
+struct termios original, raw;
+
+void reset_termios() {
+    tcsetattr(fileno(stdin), TCSANOW, &original);
+}
+
+void init_termios() {
+    tcgetattr(fileno(stdin), &original);
+    if (tcgetattr(fileno(stdin), &original) == -1) {
+        printf("tcgetattr failed\n");
+    }
+    raw = original;
+    raw.c_lflag = raw.c_lflag & ~ICANON;
+    raw.c_lflag = raw.c_lflag & ~ECHO;
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 0;
+    tcsetattr(fileno(stdin), TCSANOW, &raw);
+    if (tcsetattr(fileno(stdin), TCSANOW, &raw) == -1) {
+        printf("tcsetattr failed\n");
+    }
+    atexit(reset_termios);
+}
+
+int read_input() {
+    int c1;
+    int c2;
+    int cs = getchar();
+    if (cs == 27) {
+        c1 = getchar();
+        if (c1 == 91) {
+            c2 = getchar();
+            switch (c2) {
+                case 65:
+                    cs = 'w';
+                    return cs;
+                case 66:
+                    cs = 's';
+                    return cs;
+                case 67:
+                    cs = 'd';
+                    return cs;
+                case 68:
+                    cs = 'a';
+                    return cs;
+            }
+        }
+    } else {
+        return cs;
+    }
+    return 0;
+}
 
 int is_snake_segment(int x, int y) {
     for (int i = 0; i < snake_length; i++) {
@@ -42,6 +95,23 @@ void move_snake() {
             break;
         case right: 
             snake[0].x += 1;
+            break;
+    }
+}
+
+void change_direction (char input) {
+    switch (input) {
+        case 'w':
+            current_direction = up;
+            break;
+        case 'a':
+            current_direction = left;
+            break;
+        case 's':
+            current_direction = down;
+            break;
+        case 'd':
+            current_direction = right;
             break;
     }
 }
@@ -88,8 +158,11 @@ void init_snake() {
 }
 
 int main() {
+    init_termios();
     init_snake();
-    for (int i = 0; i < 5; i++) {
+    while (1) {
+        clearerr(stdin);
+        change_direction(read_input());
         printf(CLEAR);
         draw_field();
         usleep(500000);
