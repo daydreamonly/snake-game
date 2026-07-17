@@ -1,6 +1,8 @@
 #include "stdio.h"
+#include <unistd.h>
 #define WIDTH 20
 #define HEIGHT 10
+#define CLEAR "\033[2J\033[H"
 
 struct Point {
     int x;
@@ -88,7 +90,9 @@ void init_snake() {
 int main() {
     init_snake();
     for (int i = 0; i < 5; i++) {
+        printf(CLEAR);
         draw_field();
+        usleep(500000);
         move_snake();
     }
     return 0;
