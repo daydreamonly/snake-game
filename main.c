@@ -68,11 +68,20 @@ int read_input() {
     return 0;
 }
 
-int is_snake_segment(int x, int y) {
-    for (int i = 0; i < snake_length; i++) {
+int is_snake_segment(int start_index, int x, int y) {
+    for (int i = start_index; i < snake_length; i++) {
         if (snake[i].x == x && snake[i].y == y) {
             return 1;
         }
+    }
+    return 0;
+}
+
+int check_colission() {
+    if ((snake[0].y == 0 || snake[0].y == HEIGHT - 1) || (snake[0].x == 0 || snake[0].x == WIDTH - 1)) {
+        return 1;
+    } else if (is_snake_segment(1, snake[0].x, snake[0].y)) {
+        return 1;
     }
     return 0;
 }
@@ -121,7 +130,7 @@ void draw_field() {
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
                 putchar('#');
-            } else if (is_snake_segment(j, i)) {
+            } else if (is_snake_segment(0, j, i)) {
                 putchar('O');
             } else {
                 printf(" ");
@@ -167,6 +176,10 @@ int main() {
         draw_field();
         usleep(500000);
         move_snake();
+        if (check_colission()) {
+            printf("Game over\n");
+            break;
+        }
     }
     return 0;
 }
