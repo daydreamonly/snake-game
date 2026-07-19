@@ -147,6 +147,7 @@ void change_direction (char input) {
     }
 }
 
+void draw_field() {
     for(int i = 0; i < HEIGHT; i++) {
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
