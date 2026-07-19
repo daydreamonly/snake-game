@@ -1,7 +1,10 @@
 #include "stdio.h"
 #include "termios.h"
+#include <asm-generic/ioctls.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #define WIDTH 20
 #define HEIGHT 10
 #define CLEAR "\033[2J\033[H"
@@ -15,6 +18,7 @@ enum direction {up, down, left, right};
 enum direction current_direction = left;
 
 struct Point snake[100];
+struct Point apple;
 int snake_length = 3;
 struct termios original, raw;
 
@@ -77,10 +81,28 @@ int is_snake_segment(int start_index, int x, int y) {
     return 0;
 }
 
+void init_apple() {
+    do {
+        apple.x = rand() % (WIDTH - 2) + 1;
+        apple.y = rand() % (HEIGHT - 2) + 1;
+    } while (is_snake_segment(0, apple.x, apple.y) != 0);
+}
+
+
 int check_colission() {
     if ((snake[0].y == 0 || snake[0].y == HEIGHT - 1) || (snake[0].x == 0 || snake[0].x == WIDTH - 1)) {
         return 1;
     } else if (is_snake_segment(1, snake[0].x, snake[0].y)) {
+        return 1;
+    }
+    return 0;
+}
+
+int check_food() {
+    if (snake[0].x == apple.x && snake[0].y == apple.y) {
+        snake_length += 1;
+        snake[snake_length - 1] = snake[snake_length - 2];
+        init_apple();
         return 1;
     }
     return 0;
@@ -125,13 +147,14 @@ void change_direction (char input) {
     }
 }
 
-void draw_field() {
     for(int i = 0; i < HEIGHT; i++) {
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
                 putchar('#');
             } else if (is_snake_segment(0, j, i)) {
                 putchar('O');
+            } else if (apple.x == j && apple.y == i) {
+                putchar('@');
             } else {
                 printf(" ");
             }
@@ -166,9 +189,12 @@ void init_snake() {
     }
 }
 
+
 int main() {
+    srand(time(NULL));
     init_termios();
     init_snake();
+    init_apple();
     while (1) {
         clearerr(stdin);
         change_direction(read_input());
@@ -176,6 +202,7 @@ int main() {
         draw_field();
         usleep(500000);
         move_snake();
+        check_food();
         if (check_colission()) {
             printf("Game over\n");
             break;
