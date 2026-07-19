@@ -147,8 +147,14 @@ void change_direction (char input) {
     }
 }
 
-void draw_field() {
+void draw_field(struct winsize window) {
+    for (int i = 0; i < (window.ws_row / 2) - (HEIGHT / 2); i++) {
+        printf("\n");
+    }
     for(int i = 0; i < HEIGHT; i++) {
+        for (int k = 0; k < (window.ws_col / 2) - (WIDTH / 2); k++) {
+            printf(" ");
+        }
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
                 putchar('#');
@@ -192,6 +198,8 @@ void init_snake() {
 
 
 int main() {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     srand(time(NULL));
     init_termios();
     init_snake();
@@ -200,11 +208,14 @@ int main() {
         clearerr(stdin);
         change_direction(read_input());
         printf(CLEAR);
-        draw_field();
+        draw_field(w);
         usleep(500000);
         move_snake();
         check_food();
         if (check_colission()) {
+            for (int k = 0; k < (w.ws_col / 2) - (9 / 2); k++) {
+                printf(" ");
+            }
             printf("Game over\n");
             break;
         }
