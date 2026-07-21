@@ -17,10 +17,16 @@ struct Point {
 enum direction {up, down, left, right};
 enum direction current_direction = left;
 
+char field[WIDTH * HEIGHT];
 struct Point snake[100];
 struct Point apple;
 int snake_length = 3;
 struct termios original, raw;
+
+void set_cell(int x, int y, char c) {
+    int index = WIDTH * y + x;
+    field[index] = c;
+}
 
 void reset_termios() {
     tcsetattr(fileno(stdin), TCSANOW, &original);
@@ -148,25 +154,34 @@ void change_direction (char input) {
 }
 
 void draw_field(struct winsize window) {
-    for (int i = 0; i < (window.ws_row / 2) - (HEIGHT / 2); i++) {
-        printf("\n");
-    }
     for(int i = 0; i < HEIGHT; i++) {
-        for (int k = 0; k < (window.ws_col / 2) - (WIDTH / 2); k++) {
-            printf(" ");
-        }
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
-                putchar('#');
+                set_cell(j, i, '#');
             } else if (is_snake_segment(0, j, i)) {
-                putchar('O');
+                set_cell(j, i, 'O');
             } else if (apple.x == j && apple.y == i) {
-                putchar('@');
+                set_cell(j, i, '@');
             } else {
+                set_cell(j, i, ' ');
+            }
+        }
+    }
+    for (int i = 0; i < WIDTH * HEIGHT; i ++) {
+        if (i == 0) {
+            for (int j = 0; j < (window.ws_row / 2) - (HEIGHT / 2); j++) {
+                printf("\n");
+            }
+        }
+        if (i % WIDTH == 0) {
+            for (int k = 0; k < (window.ws_col / 2) - (WIDTH / 2); k++) {
                 printf(" ");
             }
         }
-        printf("\n");
+        putchar(field[i]);
+        if ((i + 1) % WIDTH == 0) {
+            printf("\n");
+        }
     }
 }
 
