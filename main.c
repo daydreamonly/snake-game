@@ -1,13 +1,18 @@
 #include "stdio.h"
 #include "termios.h"
 #include <asm-generic/ioctls.h>
+#include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #define WIDTH 20
 #define HEIGHT 10
 #define CLEAR "\033[2J\033[H"
+#define ALT_SCREEN_ON "\033[?1049h"
+#define ALT_SCREEN_OFF "\033[?1049l"
+#define INITIAL_SNAKE_LENGTH 3
 
 struct Point {
     int x;
@@ -20,7 +25,7 @@ enum direction current_direction = left;
 char field[WIDTH * HEIGHT];
 struct Point snake[100];
 struct Point apple;
-int snake_length = 3;
+int snake_length = INITIAL_SNAKE_LENGTH;
 struct termios original, raw;
 
 void set_cell(int x, int y, char c) {
@@ -30,9 +35,11 @@ void set_cell(int x, int y, char c) {
 
 void reset_termios() {
     tcsetattr(fileno(stdin), TCSANOW, &original);
+    printf(ALT_SCREEN_OFF);
 }
 
 void init_termios() {
+    printf(ALT_SCREEN_ON);
     tcgetattr(fileno(stdin), &original);
     if (tcgetattr(fileno(stdin), &original) == -1) {
         printf("tcgetattr failed\n");
@@ -224,11 +231,38 @@ void update_display() {
     set_cell(snake[0].x, snake[0].y, 'O');
 }
 
-int main() {
+void handle_sigint(int sig) {
+    exit(0);
+}
+
+void print_text(char text[], int gap) {
+    int start_x = (WIDTH / 2) - (strlen(text) / 2);
+    int start_y = HEIGHT / 2 - gap;
+    for (int i = 0; i < strlen(text); i++) {
+        set_cell(start_x + i, start_y, text[i]);
+    }
+}
+
+void draw_game_over() {
+    for(int i = 0; i < HEIGHT; i++) {
+        for(int j = 0; j < WIDTH; j++) {
+            if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
+                set_cell(j, i, '#');
+            } else {
+                set_cell(j, i, ' ');
+            }
+        }
+    }
+    print_text("Game over", 2);
+    print_text("r: restart", 1);
+    print_text("q: quit", 0);
+}
+
+void play_game() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    srand(time(NULL));
-    init_termios();
+    snake_length = INITIAL_SNAKE_LENGTH;
+    current_direction = left;
     init_snake();
     init_apple();
     init_field_buffer();
@@ -238,14 +272,34 @@ int main() {
         printf(CLEAR);
         draw_field(w);
         update_display();
-        usleep(350000);
+        usleep(300000);
         if (check_colission()) {
             for (int k = 0; k < (w.ws_col / 2) - (9 / 2); k++) {
                 printf(" ");
             }
-            printf("Game over\n");
-            break;
+            draw_game_over();
+            printf(CLEAR);
+            draw_field(w);
+            while (1) {
+                int key = getchar();
+                clearerr(stdin);
+                switch (key) {
+                    case 'r':
+                        return;
+                    case 'q':
+                        exit(0);
+                }
+                usleep(100000);
+            }
         }
     }
-    return 0;
+}
+
+int main() {
+    srand(time(NULL));
+    signal(SIGINT, handle_sigint);
+    init_termios();
+    while (1) {
+        play_game();
+    }
 }
