@@ -50,13 +50,11 @@ void init_termios() {
 }
 
 int read_input() {
-    int c1;
-    int c2;
     int cs = getchar();
     if (cs == 27) {
-        c1 = getchar();
+        int c1 = getchar();
         if (c1 == 91) {
-            c2 = getchar();
+            int c2 = getchar();
             switch (c2) {
                 case 65:
                     cs = 'w';
@@ -104,10 +102,10 @@ int check_colission() {
     return 0;
 }
 
-int check_food() {
+int check_food(struct Point old_tail) {
     if (snake[0].x == apple.x && snake[0].y == apple.y) {
         snake_length += 1;
-        snake[snake_length - 1] = snake[snake_length - 2];
+        snake[snake_length - 1] = old_tail;
         init_apple();
         return 1;
     }
@@ -153,7 +151,7 @@ void change_direction (char input) {
     }
 }
 
-void draw_field(struct winsize window) {
+void init_field_buffer() {
     for(int i = 0; i < HEIGHT; i++) {
         for(int j = 0; j < WIDTH; j++) {
             if ((i == 0 || i == HEIGHT - 1) || (j == 0 || j == WIDTH - 1))  {
@@ -167,6 +165,9 @@ void draw_field(struct winsize window) {
             }
         }
     }
+}
+
+void draw_field(struct winsize window) {
     for (int i = 0; i < WIDTH * HEIGHT; i ++) {
         if (i == 0) {
             for (int j = 0; j < (window.ws_row / 2) - (HEIGHT / 2); j++) {
@@ -211,6 +212,17 @@ void init_snake() {
     }
 }
 
+void update_display() {
+    struct Point old_tail;
+    old_tail = snake[snake_length - 1];
+    move_snake();
+    if (check_food(old_tail)) {
+        set_cell(apple.x, apple.y, '@');
+    } else {
+        set_cell(old_tail.x, old_tail.y, ' ');
+    }
+    set_cell(snake[0].x, snake[0].y, 'O');
+}
 
 int main() {
     struct winsize w;
@@ -219,14 +231,14 @@ int main() {
     init_termios();
     init_snake();
     init_apple();
+    init_field_buffer();
     while (1) {
         clearerr(stdin);
         change_direction(read_input());
         printf(CLEAR);
         draw_field(w);
-        usleep(500000);
-        move_snake();
-        check_food();
+        update_display();
+        usleep(350000);
         if (check_colission()) {
             for (int k = 0; k < (w.ws_col / 2) - (9 / 2); k++) {
                 printf(" ");
